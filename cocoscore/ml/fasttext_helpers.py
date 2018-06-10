@@ -25,9 +25,11 @@ def get_hyperparameter_distributions(random_seed=None):
         random_state = np.random.RandomState(random_seed)
         seeds = random_state.randint(100000, size=5)
     param_dict = {
-        '-lr': get_log_uniform(-3, 1, seeds[0]),
+        # '-lr': get_log_uniform(-3, 1, seeds[0]),
+        '-lr': get_log_uniform(-3, -1, seeds[0]),
         '-epoch': get_uniform_int(10, 51, seeds[1]),
-        '-wordNgrams': get_uniform_int(1, 6, seeds[2]),
+        # '-wordNgrams': get_uniform_int(1, 6, seeds[2]),
+        '-wordNgrams': get_uniform_int(1, 3, seeds[2]),
         '-dim': get_uniform_int(50, 500, seeds[3]),
         '-ws': get_uniform_int(3, 10, seeds[4])
     }
@@ -60,7 +62,7 @@ def get_fasttext_train_calls(train_file_path, param_dict, fasttext_path, model_p
     return train_call, compress_call
 
 
-def fasttext_fit(train_file_path, param_dict, fasttext_path, thread=1, compress_model=False, model_path='model',
+def fasttext_fit(train_file_path, param_dict, fasttext_path, thread=1, compress_model=False, model_path='/dev/shm/model',
                  pretrained_vectors_path=None):
     """
     Trains a fastText supervised model. This is a wrapper around the fastText command line interface.
@@ -157,8 +159,8 @@ def _fasttext_fit_predict(train_text_series, train_class_series,
                           pretrained_vectors_path,
                           metric='roc_auc_score'):
     # manual printing to file as to_csv complains about space as separator and spaces within sentences
-    train_path = 'tmp_ft_train.txt'
-    test_path = 'tmp_ft_test.txt'
+    train_path = '/dev/shm/tmp_ft_train.txt'
+    test_path = '/dev/shm/tmp_ft_test.txt'
     for curr_file, text_class in zip([train_path, test_path],
                                      [(train_text_series, train_class_series),
                                       (test_text_series, test_class_series)]):
@@ -166,25 +168,26 @@ def _fasttext_fit_predict(train_text_series, train_class_series,
             for text, _class in zip(*text_class):
                 fout.write(str(_class) + ' ' + str(text) + os.linesep)
 
-    train_prob_file_path = 'tmp_ft_train-prob_iter_'
-    test_prob_file_path = 'tmp_ft_test-prob_iter_'
+    train_prob_file_path = '/dev/shm/tmp_ft_train-prob_iter_'
+    test_prob_file_path = '/dev/shm/tmp_ft_test-prob_iter_'
     try:
         model_file = fasttext_fit(train_path, param_dict, fasttext_path, thread=thread,
                                   compress_model=compress_model,
                                   pretrained_vectors_path=pretrained_vectors_path)
         fasttext_predict(model_file, train_path, fasttext_path, train_prob_file_path)
         fasttext_predict(model_file, test_path, fasttext_path, test_prob_file_path)
-        os.remove(model_file)
+        # os.remove(model_file)
         train_metric, train_scores = _compute_metric(train_path, train_prob_file_path, metric=metric)
         test_metric, test_scores = _compute_metric(test_path, test_prob_file_path, metric=metric)
     except subprocess.CalledProcessError:
         # fastText may fail (e.g. segfault) for some parameter combinations
         raise IOError('fasttext failed in _fasttext_fit_predict.')
     finally:
-        os.remove(train_path)
-        os.remove(test_path)
-        os.remove(train_prob_file_path)
-        os.remove(test_prob_file_path)
+        # os.remove(train_path)
+        # os.remove(test_path)
+        # os.remove(train_prob_file_path)
+        # os.remove(test_prob_file_path)
+        pass
     return train_metric, train_scores, test_metric, test_scores
 
 
@@ -238,7 +241,6 @@ def fasttext_cv_independent_associations(data_df, param_dict, fasttext_path, cv_
     test_performances = []
     for cv_iter, train_test_indices in enumerate(cv_sets):
         train_indices, test_indices = train_test_indices
-
         train_df = data_df.iloc[train_indices, :]
         test_df = data_df.iloc[test_indices, :]
         try:

@@ -20,7 +20,7 @@ def load_data_frame(data_frame_path, sort_reindex=False, class_labels=True, matc
     if match_distance:
         column_names.append('distance')
     data_df = pd.read_csv(data_frame_path, sep='\t', header=None, index_col=False,
-                          names=column_names)
+                          names=column_names, quoting=3)
     if sort_reindex:
         data_df.sort_values('pmid', axis=0, inplace=True, kind='mergesort')
         data_df.reset_index(inplace=True, drop=True)
